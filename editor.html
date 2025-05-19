@@ -27,6 +27,18 @@
       padding-left: 1.5em;
       margin-top: 0; /* ✅ removes line before bullet list */
     }
+    .ql-editor ul {
+      list-style-type: disc;
+      padding-left: 1.5em;
+      margin-top: 0;
+    }
+    .ql-editor p + ul {
+      margin-top: 0; /* ✅ remove gap before bullet list */
+    }
+    .ql-editor li {
+      margin: 0; /* ✅ no extra space between bullet points */
+    }
+
   </style>
 </head>
 <body>
@@ -53,7 +65,7 @@
       <button class="ql-underline"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-list" value="bullet"></button> <!-- ✅ add this -->
+      <button class="ql-list" value="bullet"></button> <!-- ✅ BULLET BUTTON -->
       <button class="ql-image"></button>
     </span>
   </div>
