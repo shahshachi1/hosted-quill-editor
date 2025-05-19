@@ -24,11 +24,16 @@
     }
     .ql-editor ul,
     .ql-editor ol {
-      padding-left: 1.5em;
-      margin-top: 0;
+      padding-left: 2em; /* ✅ More indentation */
+      margin-top: 0;      /* ✅ No extra space above list */
+      margin-bottom: 0; 
     }
     .ql-editor li {
       margin: 0;
+    }
+    .ql-editor p + ul,
+    .ql-editor p + ol {
+      margin-top: 0;      /* ✅ Remove space between paragraph and list */
     }
   </style>
 </head>
