@@ -86,7 +86,17 @@
   <div id="editor"></div>
 
   <!-- Image Crop Modal -->
-  <div id="cropModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:9999; display:flex; justify-content:center; align-items:center;">
+  <div id="cropModal"
+    style="
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 9999;
+      display: flex;              /* ✅ enable flex layout */
+      justify-content: center;
+      align-items: center;
+    ">
     <div style="background:white; padding:20px; border-radius:8px; max-width:90vw; max-height:90vh; overflow:auto;">
       <img id="cropImage" style="max-width:100%;" />
       <div style="text-align:right; margin-top:10px;">
@@ -110,24 +120,29 @@
       input.setAttribute('accept', 'image/*');
       input.click();
     
-      input.onchange = () => {
+      input.onchange = async () => {
         const file = input.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = () => {
-            // Set image in modal and show it
             const imageEl = document.getElementById('cropImage');
             imageEl.src = reader.result;
     
-            // Show crop modal
+            // Show modal
             document.getElementById('cropModal').style.display = 'flex';
     
-            // Initialize cropper
+            // Init Cropper
             if (cropper) cropper.destroy();
             cropper = new Cropper(imageEl, {
-              aspectRatio: NaN, // free ratio
               viewMode: 1,
               responsive: true,
+              background: false,
+              autoCropArea: 1,
+              movable: true,
+              zoomable: true,
+              scalable: true,
+              rotatable: true,
+              touchDragZoom: true,
             });
           };
           reader.readAsDataURL(file);
