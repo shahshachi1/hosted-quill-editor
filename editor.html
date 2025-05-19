@@ -14,7 +14,7 @@
       border-bottom: 1px solid #ccc;
     }
     #editor {
-      height: calc(100vh - 42px); /* leave space for toolbar */
+      height: calc(100vh - 42px);
       padding: 16px;
       overflow-y: auto;
     }
@@ -25,24 +25,17 @@
     .ql-editor ul {
       list-style-type: disc;
       padding-left: 1.5em;
-      margin-top: 0; /* ✅ removes line before bullet list */
-    }
-    .ql-editor ul {
-      list-style-type: disc;
-      padding-left: 1.5em;
       margin-top: 0;
     }
     .ql-editor p + ul {
-      margin-top: 0; /* ✅ remove gap before bullet list */
+      margin-top: 0;
     }
     .ql-editor li {
-      margin: 0; /* ✅ no extra space between bullet points */
+      margin: 0;
     }
-
   </style>
 </head>
 <body>
-  <!-- Toolbar UI -->
   <div id="toolbar">
     <span class="ql-formats">
       <button class="ql-bold"></button>
@@ -50,44 +43,36 @@
       <button class="ql-underline"></button>
     </span>
     <span class="ql-formats">
+      <button class="ql-list" value="bullet"></button>
+      <button class="ql-list" value="ordered"></button>
+    </span>
+    <span class="ql-formats">
       <button class="ql-image"></button>
     </span>
   </div>
 
-  <!-- Editor -->
   <div id="editor"></div>
-
-  <!-- Toolbar UI -->
-  <div id="toolbar">
-    <span class="ql-formats">
-      <button class="ql-bold"></button>
-      <button class="ql-italic"></button>
-      <button class="ql-underline"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-list" value="bullet"></button> <!-- ✅ BULLET BUTTON -->
-      <button class="ql-image"></button>
-    </span>
-  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
   <script>
+    Quill.register('modules/imageResize', window.ImageResize);
+
     const quill = new Quill('#editor', {
       theme: 'snow',
       placeholder: 'Type your description...',
       modules: {
-        toolbar: '#toolbar'
+        toolbar: '#toolbar',
+        imageResize: {}
       }
     });
 
-    // Message handlers
     window.addEventListener('message', (event) => {
       if (event.data === 'getContent') {
         const html = quill.root.innerHTML;
         window.parent.postMessage({ html }, '*');
       }
-
       if (event.data?.type === 'setContent') {
         quill.root.innerHTML = event.data.html || '';
       }
