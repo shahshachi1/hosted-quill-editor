@@ -1,52 +1,67 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Rich Text Editor</title>
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
+<head>
+  <meta charset="UTF-8" />
+  <title>Rich Text Editor</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #toolbar {
+      background: #f3f3f3;
+      border-bottom: 1px solid #ccc;
+    }
+    #editor {
+      height: calc(100vh - 42px); /* leave space for toolbar */
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .ql-editor img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar UI -->
+  <div id="toolbar">
+    <span class="ql-formats">
+      <button class="ql-bold"></button>
+      <button class="ql-italic"></button>
+      <button class="ql-underline"></button>
+    </span>
+    <span class="ql-formats">
+      <button class="ql-image"></button> <!-- ✅ This adds the image button -->
+    </span>
+  </div>
+
+  <!-- Editor -->
+  <div id="editor"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script>
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      placeholder: 'Type your description...',
+      modules: {
+        toolbar: '#toolbar' // ✅ Enable our custom toolbar
       }
-      #editor {
-        height: 100vh;
-        padding: 16px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="editor"></div>
-
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script>
-      const quill = new Quill('#editor', {
-        theme: 'snow',
-        placeholder: 'Type your description...',
-      });
-
-      // Allow parent window to request content
-      window.addEventListener('message', (event) => {
-        if (event.data === 'getContent') {
-          const html = quill.root.innerHTML;
-          window.parent.postMessage({ html }, '*');
-        }
-      });
-
-      // Allow parent window to preload content
-      window.addEventListener('message', (event) => {
-        if (event.data.type === 'setContent') {
-          quill.root.innerHTML = event.data.html || '';
-        }
-      });
-
-    window.addEventListener('message', (event) => {
-        if (event.data === 'getContent') {
-            const html = quill.root.innerHTML;
-            window.parent.postMessage({ html }, '*');
-        }
     });
 
-    </script>
-  </body>
+    // Handle parent messages
+    window.addEventListener('message', (event) => {
+      if (event.data === 'getContent') {
+        const html = quill.root.innerHTML;
+        window.parent.postMessage({ html }, '*');
+      }
+
+      if (event.data?.type === 'setContent') {
+        quill.root.innerHTML = event.data.html || '';
+      }
+    });
+  </script>
+</body>
 </html>
