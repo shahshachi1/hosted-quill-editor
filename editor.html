@@ -22,6 +22,11 @@
       max-width: 100%;
       height: auto;
     }
+    .ql-editor ul {
+      list-style-type: disc;
+      padding-left: 1.5em;
+      margin-top: 0; /* ✅ removes line before bullet list */
+    }
   </style>
 </head>
 <body>
@@ -33,7 +38,7 @@
       <button class="ql-underline"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-image"></button> <!-- ✅ This adds the image button -->
+      <button class="ql-image"></button>
     </span>
   </div>
 
@@ -47,11 +52,11 @@
       theme: 'snow',
       placeholder: 'Type your description...',
       modules: {
-        toolbar: '#toolbar' // ✅ Enable our custom toolbar
+        toolbar: '#toolbar'
       }
     });
 
-    // Handle parent messages
+    // Message handlers
     window.addEventListener('message', (event) => {
       if (event.data === 'getContent') {
         const html = quill.root.innerHTML;
