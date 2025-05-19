@@ -49,24 +49,36 @@
       padding-left: 6em;
     }
     /* Add more levels if needed */
+    /* Force bullets to indent like numbered lists */
+    .ql-editor ul {
+      list-style-type: disc;
+      padding-left: 2em;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    .ql-editor li::before {
+      content: none !important; /* Disable Quill's custom bullet rendering */
+    }
   </style>
   
 </head>
 <body>
   <div id="toolbar">
-    <span class="ql-formats">
-      <button class="ql-bold"></button>
-      <button class="ql-italic"></button>
-      <button class="ql-underline"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-list" value="bullet"></button>
-      <button class="ql-list" value="ordered"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-image"></button>
-    </span>
-  </div>
+  <span class="ql-formats">
+    <button class="ql-bold"></button>
+    <button class="ql-italic"></button>
+    <button class="ql-underline"></button>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-list" value="bullet"></button>
+    <button class="ql-list" value="ordered"></button>
+  </span>
+  <span class="ql-formats">
+    <select class="ql-color"></select> <!-- ✅ text color -->
+    <button class="ql-link"></button> <!-- ✅ hyperlink -->
+    <button class="ql-image"></button>
+  </span>
+</div>
 
   <div id="editor"></div>
 
