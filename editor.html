@@ -39,6 +39,14 @@
           quill.root.innerHTML = event.data.html || '';
         }
       });
+
+    window.addEventListener('message', (event) => {
+        if (event.data === 'getContent') {
+            const html = quill.root.innerHTML;
+            window.parent.postMessage({ html }, '*');
+        }
+    });
+
     </script>
   </body>
 </html>
