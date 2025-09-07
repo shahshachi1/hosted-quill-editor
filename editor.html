@@ -10,20 +10,55 @@
 
   <style>
     body { margin: 0; font-family: sans-serif; }
-    #toolbar { background: #f3f3f3; border-bottom: 1px solid #ccc; }
+    /* Toolbar container */
+    #toolbar { background: #f3f3f3; border-bottom: 1px solid #ccc; padding: 6px 8px; }
+    #toolbar .ql-formats { margin-right: 10px; }
 
-    /* Tighter container */
-    #editor { height: calc(100vh - 42px); padding: 4px 8px; overflow-y: auto; }
+    /* Make Quill toolbar controls larger */
+    .ql-toolbar.ql-snow button {
+      width: 36px; height: 36px;
+    }
+    .ql-toolbar.ql-snow .ql-picker {
+      height: 36px; font-size: 14px;
+    }
+    .ql-toolbar.ql-snow .ql-picker-label {
+      padding: 6px 10px; line-height: 24px;
+    }
+    .ql-toolbar.ql-snow .ql-picker.ql-align { width: 160px; } /* wider align dropdown */
+    .ql-toolbar.ql-snow .ql-picker-options {
+      z-index: 9999; /* keep menu above iframe bounds */
+    }
+
+    /* Bigger & longer image size dropdown (native select) */
+    #toolbar select.ql-img-size {
+      min-width: 180px;           /* wider box */
+      height: 36px;               /* taller click target */
+      font-size: 14px;
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+
+    /* Optional: bigger on touch devices */
+    @media (pointer: coarse) {
+      .ql-toolbar.ql-snow button { width: 40px; height: 40px; }
+      .ql-toolbar.ql-snow .ql-picker { height: 40px; font-size: 16px; }
+      .ql-toolbar.ql-snow .ql-picker-label { padding: 8px 12px; line-height: 24px; }
+      #toolbar select.ql-img-size { height: 40px; font-size: 16px; min-width: 200px; }
+    }
+
+    /* Editor area */
+    #editor { height: calc(100vh - 56px); padding: 4px 8px; overflow-y: auto; }
 
     /* Tighter Quill defaults + centered images */
     .ql-editor { padding: 4px 6px; }
     .ql-editor p { margin-top: 0; margin-bottom: 0; }
     .ql-editor img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 
-    /* small toolbar tweaks */
+    /* Zoom button labels */
     .ql-formats .ql-zoom-out::after { content: "−"; font-weight: bold; }
     .ql-formats .ql-zoom-in::after  { content: "+"; font-weight: bold; }
-    .ql-formats select.ql-img-size { min-width: 72px; }
   </style>
 </head>
 <body>
@@ -47,16 +82,16 @@
       <select class="ql-align"></select>
     </span>
 
-    <!-- 🔍 Image zoom controls -->
+    <!-- 🔍 Image zoom controls + bigger preset dropdown -->
     <span class="ql-formats">
       <button class="ql-zoom-out" title="Zoom Out"></button>
       <button class="ql-zoom-in"  title="Zoom In"></button>
       <select class="ql-img-size" title="Image Size">
-        <option selected></option>
-        <option value="25">25%</option>
-        <option value="50">50%</option>
-        <option value="75">75%</option>
-        <option value="100">100%</option>
+        <option selected>Image size…</option>
+        <option value="25">25% (small)</option>
+        <option value="50">50% (medium)</option>
+        <option value="75">75% (large)</option>
+        <option value="100">100% (full width)</option>
       </select>
     </span>
   </div>
@@ -86,15 +121,10 @@
       const range = quill.getSelection();
       if (!range) return null;
       let [leaf] = quill.getLeaf(range.index);
-      if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-        return leaf.domNode;
-      }
-      // If cursor is just after the image, look back one position
+      if (leaf?.domNode?.tagName === 'IMG') return leaf.domNode;
       if (range.index > 0) {
         [leaf] = quill.getLeaf(range.index - 1);
-        if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-          return leaf.domNode;
-        }
+        if (leaf?.domNode?.tagName === 'IMG') return leaf.domNode;
       }
       return null;
     }
@@ -106,16 +136,14 @@
       img.style.width = pct + '%';
       img.style.maxWidth = '100%';
       img.style.height = 'auto';
-      // keep block/center; user can re-align using toolbar if desired
     }
 
     function adjustImageWidth(deltaPercent) {
       const img = getSelectedImage();
       if (!img) { console.warn('No image selected to resize'); return; }
 
-      const editorW = quill.root.clientWidth || (img.parentElement && img.parentElement.clientWidth) || 1;
+      const editorW = quill.root.clientWidth || (img.parentElement?.clientWidth) || 1;
 
-      // derive current % from style or measured width
       let currentPct = 100;
       const sw = (img.style.width || '').trim();
       if (sw.endsWith('%')) {
@@ -147,9 +175,8 @@
               'img-size': function (value) {
                 if (value) {
                   setImageWidthPercent(value);
-                  // reset dropdown to placeholder so user can pick same value again
                   const sel = this.container.querySelector('select.ql-img-size');
-                  if (sel) sel.selectedIndex = 0;
+                  if (sel) sel.selectedIndex = 0; // reset placeholder
                 }
               }
             }
