@@ -19,12 +19,19 @@
     }
     #editor {
       height: calc(100vh - 42px);
-      padding: 16px;
+      padding: 4px 8px;       /* reduced outer padding */
       overflow-y: auto;
+    }
+    .ql-editor {
+      padding: 4px 6px;       /* reduced Quill’s internal padding */
     }
     .ql-editor img {
       max-width: 100%;
       height: auto;
+    }
+    .ql-editor p {
+      margin-top: 0;
+      margin-bottom: 0;
     }
   </style>
 </head>
@@ -36,10 +43,12 @@
       <button class="ql-bold"></button>
       <button class="ql-italic"></button>
       <button class="ql-underline"></button>
+      <select class="ql-color"></select>
       <button class="ql-list" value="ordered"></button>
       <button class="ql-list" value="bullet"></button>
       <button class="ql-link"></button>
       <button class="ql-image"></button>
+      <select class="ql-background"></select>
     </span>
   </div>
 
@@ -53,7 +62,6 @@
       const origin = document.referrer?.startsWith('http')
         ? new URL(document.referrer).origin
         : '*';
-      console.log('📡 Sending editorReady to parent at origin:', origin);
       window.parent.postMessage({ type: 'editorReady' }, origin);
     };
 
@@ -64,43 +72,27 @@
         modules: { toolbar: '#toolbar' }
       });
 
-      console.log('✅ Quill initialized');
-
-      // Send editorReady after short delay to ensure parent is ready
       setTimeout(() => {
         sendEditorReady();
       }, 100);
     });
 
     window.addEventListener('message', (event) => {
-      console.log('📨 iframe received message:', event.data, 'from origin:', event.origin);
-
-      // Respond to ping from parent
       if (event.data?.type === 'ping') {
-        console.log('📡 Responding to ping with editorReady');
         sendEditorReady();
         return;
       }
-
-      // Parent requests content
       if (event.data === 'getContent') {
         const html = quill.root.innerHTML;
-        console.log('📤 Sending content to parent:', html);
         window.parent.postMessage({ html }, event.origin);
       }
-
-      // Parent sends content to insert
       if (event.data?.type === 'setContent') {
         const incomingHtml = event.data.html || '';
-        console.log('📥 Received content to set:', incomingHtml);
         try {
           const delta = quill.clipboard.convert(incomingHtml);
-          console.log('📄 Delta after convert:', delta);
           quill.setContents(delta);
-          console.log('✅ Content set successfully');
         } catch (e) {
           console.error('❌ Failed to set Quill content:', e);
-          console.log('⛔ Falling back to direct innerHTML');
           quill.root.innerHTML = incomingHtml;
         }
       }
