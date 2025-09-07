@@ -19,16 +19,17 @@
     }
     #editor {
       height: calc(100vh - 42px);
-      padding: 4px 8px;       /* reduced outer padding */
+      padding: 4px 8px;   /* reduced padding so content sits closer */
       overflow-y: auto;
     }
-    .ql-editor {
-      padding: 4px 6px;       /* reduced Quill’s internal padding */
-    }
+
     .ql-editor img {
       max-width: 100%;
       height: auto;
+      display: block;     /* make images take their own line */
+      margin: 0 auto;     /* default center */
     }
+
     .ql-editor p {
       margin-top: 0;
       margin-bottom: 0;
@@ -49,6 +50,9 @@
       <button class="ql-link"></button>
       <button class="ql-image"></button>
       <select class="ql-background"></select>
+
+      <!-- Alignment dropdown -->
+      <select class="ql-align"></select>
     </span>
   </div>
 
@@ -69,9 +73,13 @@
       quill = new Quill('#editor', {
         theme: 'snow',
         placeholder: 'Type your description...',
-        modules: { toolbar: '#toolbar' }
+        modules: {
+          toolbar: '#toolbar',
+          align: true   // explicitly enable align module
+        }
       });
 
+      // Let parent know the editor is ready
       setTimeout(() => {
         sendEditorReady();
       }, 100);
@@ -82,10 +90,12 @@
         sendEditorReady();
         return;
       }
+
       if (event.data === 'getContent') {
         const html = quill.root.innerHTML;
         window.parent.postMessage({ html }, event.origin);
       }
+
       if (event.data?.type === 'setContent') {
         const incomingHtml = event.data.html || '';
         try {
