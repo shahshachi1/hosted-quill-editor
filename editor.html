@@ -10,55 +10,15 @@
 
   <style>
     body { margin: 0; font-family: sans-serif; }
-    /* Toolbar container */
     #toolbar { background: #f3f3f3; border-bottom: 1px solid #ccc; padding: 6px 8px; }
-    #toolbar .ql-formats { margin-right: 10px; }
-
-    /* Make Quill toolbar controls larger */
-    .ql-toolbar.ql-snow button {
-      width: 36px; height: 36px;
-    }
-    .ql-toolbar.ql-snow .ql-picker {
-      height: 36px; font-size: 14px;
-    }
-    .ql-toolbar.ql-snow .ql-picker-label {
-      padding: 6px 10px; line-height: 24px;
-    }
-    .ql-toolbar.ql-snow .ql-picker.ql-align { width: 160px; } /* wider align dropdown */
-    .ql-toolbar.ql-snow .ql-picker-options {
-      z-index: 9999; /* keep menu above iframe bounds */
-    }
-
-    /* Bigger & longer image size dropdown (native select) */
-    #toolbar select.ql-img-size {
-      min-width: 180px;           /* wider box */
-      height: 36px;               /* taller click target */
-      font-size: 14px;
-      padding: 4px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: white;
-    }
-
-    /* Optional: bigger on touch devices */
-    @media (pointer: coarse) {
-      .ql-toolbar.ql-snow button { width: 40px; height: 40px; }
-      .ql-toolbar.ql-snow .ql-picker { height: 40px; font-size: 16px; }
-      .ql-toolbar.ql-snow .ql-picker-label { padding: 8px 12px; line-height: 24px; }
-      #toolbar select.ql-img-size { height: 40px; font-size: 16px; min-width: 200px; }
-    }
 
     /* Editor area */
     #editor { height: calc(100vh - 56px); padding: 4px 8px; overflow-y: auto; }
 
-    /* Tighter Quill defaults + centered images */
+    /* Tight text spacing + responsive images (we'll still set explicit px on insert) */
     .ql-editor { padding: 4px 6px; }
     .ql-editor p { margin-top: 0; margin-bottom: 0; }
-    .ql-editor img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
-
-    /* Zoom button labels */
-    .ql-formats .ql-zoom-out::after { content: "−"; font-weight: bold; }
-    .ql-formats .ql-zoom-in::after  { content: "+"; font-weight: bold; }
+    .ql-editor img { max-width: 100%; height: auto; display: block; }
   </style>
 </head>
 <body>
@@ -78,21 +38,7 @@
       <button class="ql-image"></button>
       <select class="ql-background"></select>
 
-      <!-- Alignment dropdown -->
       <select class="ql-align"></select>
-    </span>
-
-    <!-- 🔍 Image zoom controls + bigger preset dropdown -->
-    <span class="ql-formats">
-      <button class="ql-zoom-out" title="Zoom Out"></button>
-      <button class="ql-zoom-in"  title="Zoom In"></button>
-      <select class="ql-img-size" title="Image Size">
-        <option selected>Image size…</option>
-        <option value="25">25% (small)</option>
-        <option value="50">50% (medium)</option>
-        <option value="75">75% (large)</option>
-        <option value="100">100% (full width)</option>
-      </select>
     </span>
   </div>
 
@@ -116,52 +62,72 @@
       }
     };
 
-    // --- Image helpers ---
-    function getSelectedImage() {
-      const range = quill.getSelection();
-      if (!range) return null;
-      let [leaf] = quill.getLeaf(range.index);
-      if (leaf?.domNode?.tagName === 'IMG') return leaf.domNode;
-      if (range.index > 0) {
-        [leaf] = quill.getLeaf(range.index - 1);
-        if (leaf?.domNode?.tagName === 'IMG') return leaf.domNode;
+    // ---- IMAGE INSERT HELPERS ----
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function askImageSize() {
+      // OK -> default 300x300, Cancel -> custom
+      const useDefault = window.confirm('Use default image size 300×300? \nOK = Default,  Cancel = Custom size');
+      if (useDefault) return { width: 300, height: 300 };
+
+      const wStr = window.prompt('Enter image WIDTH in pixels (e.g., 300):', '300');
+      const hStr = window.prompt('Enter image HEIGHT in pixels (e.g., 300):', '300');
+
+      let w = parseInt(wStr, 10);
+      let h = parseInt(hStr, 10);
+
+      if (Number.isNaN(w)) w = 300;
+      if (Number.isNaN(h)) h = 300;
+
+      // simple sanity limits
+      w = clamp(w, 10, 4000);
+      h = clamp(h, 10, 4000);
+
+      return { width: w, height: h };
+    }
+
+    function insertImageWithSize(dataUrl, w, h) {
+      const range = quill.getSelection(true) || { index: quill.getLength(), length: 0 };
+      quill.insertEmbed(range.index, 'image', dataUrl, 'user');
+      quill.setSelection(range.index + 1, 0, 'silent');
+
+      // Try to grab the img we just inserted
+      const [leaf] = quill.getLeaf(range.index);
+      let img = (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') ? leaf.domNode : null;
+
+      // Fallback: last image in editor
+      if (!img) {
+        const imgs = quill.root.querySelectorAll('img');
+        if (imgs.length) img = imgs[imgs.length - 1];
       }
-      return null;
-    }
 
-    function setImageWidthPercent(percent) {
-      const img = getSelectedImage();
-      if (!img) { console.warn('No image selected to resize'); return; }
-      const pct = Math.max(10, Math.min(200, Number(percent) || 100));
-      img.style.width = pct + '%';
-      img.style.maxWidth = '100%';
-      img.style.height = 'auto';
-    }
-
-    function adjustImageWidth(deltaPercent) {
-      const img = getSelectedImage();
-      if (!img) { console.warn('No image selected to resize'); return; }
-
-      const editorW = quill.root.clientWidth || (img.parentElement?.clientWidth) || 1;
-
-      let currentPct = 100;
-      const sw = (img.style.width || '').trim();
-      if (sw.endsWith('%')) {
-        currentPct = parseFloat(sw);
-      } else if (sw.endsWith('px')) {
-        const px = parseFloat(sw);
-        currentPct = Math.round((px / editorW) * 100);
-      } else {
-        currentPct = Math.round((img.offsetWidth / editorW) * 100);
+      if (img) {
+        // Apply explicit pixel dimensions so it persists in saved HTML
+        img.style.width = w + 'px';
+        img.style.height = h + 'px';
+        img.style.maxWidth = '100%'; // don’t overflow container if user picks very large dimensions
+        img.style.height = h + 'px'; // keep requested height (may distort if different aspect ratio)
       }
-
-      const next = Math.max(10, Math.min(200, currentPct + deltaPercent));
-      img.style.width = next + '%';
-      img.style.maxWidth = '100%';
-      img.style.height = 'auto';
     }
 
-    // --- Initialize Quill with custom handlers ---
+    function customImageHandler() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const { width, height } = askImageSize();
+          insertImageWithSize(reader.result, width, height);
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    }
+
+    // ---- Initialize Quill ----
     window.addEventListener('DOMContentLoaded', () => {
       quill = new Quill('#editor', {
         theme: 'snow',
@@ -170,15 +136,7 @@
           toolbar: {
             container: '#toolbar',
             handlers: {
-              'zoom-in': () => adjustImageWidth(+10),
-              'zoom-out': () => adjustImageWidth(-10),
-              'img-size': function (value) {
-                if (value) {
-                  setImageWidthPercent(value);
-                  const sel = this.container.querySelector('select.ql-img-size');
-                  if (sel) sel.selectedIndex = 0; // reset placeholder
-                }
-              }
+              image: customImageHandler // <-- override default image flow
             }
           }
         }
@@ -187,14 +145,14 @@
       isQuillReady = true;
       setTimeout(sendEditorReady, 50);
 
-      // Drain any queued messages
+      // Drain queued messages
       while (pendingMessages.length) {
         const evt = pendingMessages.shift();
         processMessage(evt);
       }
     });
 
-    // Process messages that require Quill
+    // ---- Messaging with parent ----
     const processMessage = (event) => {
       const data = event.data;
 
@@ -207,29 +165,26 @@
       if (data?.type === 'setContent') {
         const incomingHtml = data.html || '';
         try {
+          // Try normal paste first; if styles are important and get lost, fall back to innerHTML
           const delta = quill.clipboard.convert(incomingHtml);
           quill.setContents(delta);
         } catch (e) {
-          console.error('❌ Failed to set Quill content via delta; falling back to innerHTML.', e);
+          console.warn('Falling back to innerHTML for setContent due to conversion error.', e);
           quill.root.innerHTML = incomingHtml;
         }
       }
     };
 
-    // Global message handler (queue until ready)
     window.addEventListener('message', (event) => {
       const data = event.data;
-
       if (data?.type === 'ping') {
         sendEditorReady();
         return;
       }
-
       if (!isQuillReady) {
         pendingMessages.push(event);
         return;
       }
-
       processMessage(event);
     });
   </script>
