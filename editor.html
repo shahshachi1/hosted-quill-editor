@@ -67,7 +67,7 @@
 
     function askImageSize() {
       // OK -> default 300x300, Cancel -> custom
-      const useDefault = window.confirm('Use default image size 300×300? \nOK = Default,  Cancel = Custom size');
+      const useDefault = window.confirm('Use default image size 300×300px? \nOK = Default,  Cancel = Custom size');
       if (useDefault) return { width: 300, height: 300 };
 
       const wStr = window.prompt('Enter image WIDTH in pixels (e.g., 300):', '300');
