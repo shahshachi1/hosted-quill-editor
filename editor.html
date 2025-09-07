@@ -9,31 +9,16 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-    }
-    #toolbar {
-      background: #f3f3f3;
-      border-bottom: 1px solid #ccc;
-    }
-    #editor {
-      height: calc(100vh - 42px);
-      padding: 4px 8px;   /* reduced padding so content sits closer */
-      overflow-y: auto;
-    }
+    body { margin: 0; font-family: sans-serif; }
+    #toolbar { background: #f3f3f3; border-bottom: 1px solid #ccc; }
 
-    .ql-editor img {
-      max-width: 100%;
-      height: auto;
-      display: block;     /* make images take their own line */
-      margin: 0 auto;     /* default center */
-    }
+    /* Tighter container */
+    #editor { height: calc(100vh - 42px); padding: 4px 8px; overflow-y: auto; }
 
-    .ql-editor p {
-      margin-top: 0;
-      margin-bottom: 0;
-    }
+    /* Tighter Quill defaults + centered images */
+    .ql-editor { padding: 4px 6px; }
+    .ql-editor p { margin-top: 0; margin-bottom: 0; }
+    .ql-editor img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
   </style>
 </head>
 <body>
@@ -45,8 +30,10 @@
       <button class="ql-italic"></button>
       <button class="ql-underline"></button>
       <select class="ql-color"></select>
+
       <button class="ql-list" value="ordered"></button>
       <button class="ql-list" value="bullet"></button>
+
       <button class="ql-link"></button>
       <button class="ql-image"></button>
       <select class="ql-background"></select>
@@ -60,51 +47,86 @@
   <div id="editor"></div>
 
   <script>
-    let quill;
+    let quill = null;
+    let isQuillReady = false;
+    const pendingMessages = [];
 
-    const sendEditorReady = () => {
-      const origin = document.referrer?.startsWith('http')
+    const safeOrigin = () => {
+      return document.referrer?.startsWith('http')
         ? new URL(document.referrer).origin
         : '*';
-      window.parent.postMessage({ type: 'editorReady' }, origin);
     };
 
+    const sendEditorReady = () => {
+      // Signal readiness only after Quill is initialized
+      if (isQuillReady) {
+        window.parent.postMessage({ type: 'editorReady' }, safeOrigin());
+      }
+    };
+
+    // Handle messages that require Quill (can be called after ready)
+    const processMessage = (event) => {
+      const data = event.data;
+
+      if (data === 'getContent') {
+        const html = quill.root.innerHTML;
+        window.parent.postMessage({ html }, event.origin);
+        return;
+      }
+
+      if (data?.type === 'setContent') {
+        const incomingHtml = data.html || '';
+        try {
+          const delta = quill.clipboard.convert(incomingHtml);
+          quill.setContents(delta);
+        } catch (e) {
+          console.error('❌ Failed to set Quill content via delta; falling back to innerHTML.', e);
+          quill.root.innerHTML = incomingHtml;
+        }
+      }
+    };
+
+    // Global message handler (queues until Quill is ready)
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      // Always respond to pings immediately (to help parent know iframe is alive)
+      if (data?.type === 'ping') {
+        // Only announce "editorReady" after Quill is actually ready
+        sendEditorReady();
+        return;
+      }
+
+      // If Quill isn't ready yet, queue the message
+      if (!isQuillReady) {
+        pendingMessages.push(event);
+        return;
+      }
+
+      // Otherwise process immediately
+      processMessage(event);
+    });
+
+    // Initialize Quill
     window.addEventListener('DOMContentLoaded', () => {
       quill = new Quill('#editor', {
         theme: 'snow',
         placeholder: 'Type your description...',
         modules: {
-          toolbar: '#toolbar',
-          align: true   // explicitly enable align module
+          toolbar: '#toolbar'
+          // Alignment is auto-wired by the presence of <select class="ql-align">
         }
       });
 
-      // Let parent know the editor is ready
-      setTimeout(() => {
-        sendEditorReady();
-      }, 100);
-    });
+      isQuillReady = true;
 
-    window.addEventListener('message', (event) => {
-      if (event.data?.type === 'ping') {
-        sendEditorReady();
-        return;
-      }
+      // Notify parent that we're ready
+      setTimeout(sendEditorReady, 50);
 
-      if (event.data === 'getContent') {
-        const html = quill.root.innerHTML;
-        window.parent.postMessage({ html }, event.origin);
-      }
-
-      if (event.data?.type === 'setContent') {
-        const incomingHtml = event.data.html || '';
-        try {
-          const delta = quill.clipboard.convert(incomingHtml);
-          quill.setContents(delta);
-        } catch (e) {
-          console.error('❌ Failed to set Quill content:', e);
-          quill.root.innerHTML = incomingHtml;
-        }
+      // Drain any queued messages that arrived before Quill was ready
+      while (pendingMessages.length) {
+        const evt = pendingMessages.shift();
+        processMessage(evt);
       }
     });
   </script>
