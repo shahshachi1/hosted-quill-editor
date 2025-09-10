@@ -3,101 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <title>Rich Text Editor</title>
-
-  <!-- Quill -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-
   <style>
-    /* Base */
-    body { margin: 0; font-family: sans-serif; }
+    html, body { height: 100%; margin: 0; font-family: sans-serif; }
+    /* Make only the editor area scroll */
+    body { overflow: hidden; }
     #toolbar { background: #f3f3f3; border-bottom: 1px solid #ccc; padding: 6px 8px; }
-    #editor { height: calc(100vh - 56px); padding: 4px 8px; overflow-y: auto; }
+    #editor { height: calc(100vh - 56px); padding: 4px 8px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-    /* Quill content area */
     .ql-editor { padding: 4px 6px; }
-
-    /* 👉 Match EventList.jsx tag spacing & styles */
     .ql-editor a {
-      color: #D32F2F;
-      font-weight: 700;
-      text-decoration: underline;
-      text-decoration-color: #D32F2F;
-      line-height: 18px;
+      color: #D32F2F; font-weight: 700; text-decoration: underline; text-decoration-color: #D32F2F; line-height: 18px;
     }
-    .ql-editor span {
-      color: #000;
-      line-height: 15px;
-    }
-    .ql-editor p {
-      margin-top: 5px;      /* EventList: p { marginTop: 5 } */
-      margin-bottom: 2px;   /* EventList: p { marginBottom: 2 } */
-      line-height: 18px;    /* EventList: p { lineHeight: 18 } */
-    }
-
-    /* Lists */
+    .ql-editor span { color: #000; line-height: 15px; }
+    .ql-editor p { margin-top: 5px; margin-bottom: 2px; line-height: 18px; }
     .ql-editor ul { padding-left: 25px; margin-top: 2px; margin-bottom: 2px; }
     .ql-editor ol { padding-left: 30px; margin-top: 2px; margin-bottom: 2px; }
-    .ql-editor li  {
-      margin-top: 0;
-      margin-bottom: 0;
-      list-style-position: inside;
-      padding-left: 3px;
-    }
+    .ql-editor li { margin-top: 0; margin-bottom: 0; list-style-position: inside; padding-left: 3px; }
     .ql-editor li p { margin-top: 0; margin-bottom: 0; }
 
-    /* Images */
+    /* Images: keep them responsive & non-interactive so they don't steal scroll */
     .ql-editor img {
-      max-width: 100%;   /* don’t overflow container */
-      height: auto;      /* natural aspect ratio in editor view */
       display: block;
+      max-width: 100%;
+      height: auto;
+      pointer-events: none; /* important for touch scroll */
+      position: static !important; /* kill any inline position carry-overs */
     }
 
-    /* Text alignment (unchanged) */
+    /* Text alignment */
     .ql-editor .ql-align-center { text-align: center; }
     .ql-editor .ql-align-right  { text-align: right; }
     .ql-editor .ql-align-justify { text-align: justify; }
 
-    /* ✅ Image alignment — handle every way Quill may encode it */
-
-    /* Centered */
+    /* Image alignment (no floats) */
     .ql-editor .ql-align-center img,
     .ql-editor img.ql-align-center,
     .ql-editor img[data-align="center"],
     .ql-editor [style*="text-align:center"] > img {
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-      float: none;       /* make sure floats don’t override centering */
+      margin-left: auto; margin-right: auto;
     }
-
-    /* Right */
     .ql-editor .ql-align-right img,
     .ql-editor img.ql-align-right,
     .ql-editor img[data-align="right"],
     .ql-editor [style*="text-align:right"] > img {
-      display: block;
-      margin-left: auto;
-      margin-right: 0;
-      float: right;      /* match Quill’s right-alignment behavior */
+      margin-left: auto; margin-right: 0;
     }
-
-    /* Left (explicit) */
     .ql-editor .ql-align-left img,
     .ql-editor img.ql-align-left,
     .ql-editor img[data-align="left"],
     .ql-editor [style*="text-align:left"] > img {
-      display: block;
-      margin-left: 0;
-      margin-right: auto;
-      float: left;
+      margin-left: 0; margin-right: auto;
     }
-
   </style>
 </head>
 <body>
-
-  <!-- Toolbar -->
   <div id="toolbar">
     <span class="ql-formats">
       <button class="ql-bold"></button>
@@ -116,7 +77,6 @@
     </span>
   </div>
 
-  <!-- Quill Editor -->
   <div id="editor"></div>
 
   <script>
@@ -136,26 +96,15 @@
       }
     };
 
-    /* ---------- Image helpers (default/custom size prompt) ---------- */
-    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+    /* ---------- Helpers ---------- */
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
     function askImageSize() {
       const useDefault = window.confirm('Use default image size 300×300px?\nOK = Default,  Cancel = Custom size');
       if (useDefault) return { width: 300, height: 300 };
-
-      const wStr = window.prompt('Enter image WIDTH in pixels (e.g., 300):', '300');
-      const hStr = window.prompt('Enter image HEIGHT in pixels (e.g., 300):', '300');
-
-      let w = parseInt(wStr, 10);
-      let h = parseInt(hStr, 10);
-
-      if (Number.isNaN(w)) w = 300;
-      if (Number.isNaN(h)) h = 300;
-
-      w = clamp(w, 10, 4000);
-      h = clamp(h, 10, 4000);
-
-      return { width: w, height: h };
+      const w = parseInt(window.prompt('Enter image WIDTH in pixels (e.g., 300):', '300') || '300', 10);
+      const h = parseInt(window.prompt('Enter image HEIGHT in pixels (e.g., 300):', '300') || '300', 10);
+      return { width: clamp(isNaN(w) ? 300 : w, 10, 4000), height: clamp(isNaN(h) ? 300 : h, 10, 4000) };
     }
 
     function insertImageWithSize(dataUrl, w, h) {
@@ -163,10 +112,9 @@
       quill.insertEmbed(range.index, 'image', dataUrl, 'user');
       quill.setSelection(range.index + 1, 0, 'silent');
 
-      // Try to grab the just-inserted <img>
+      // Try to grab the <img> we just inserted
       const [leaf] = quill.getLeaf(range.index);
       let img = (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') ? leaf.domNode : null;
-
       if (!img) {
         const imgs = quill.root.querySelectorAll('img');
         if (imgs.length) img = imgs[imgs.length - 1];
@@ -174,9 +122,12 @@
 
       if (img) {
         img.style.width = w + 'px';
-        img.style.height = h + 'px';   // fixed height to match chosen size
-        img.style.maxWidth = '100%';   // prevent overflow on small screens
+        img.style.height = h + 'px';      // explicit px preserved in saved HTML
+        img.style.maxWidth = '100%';      // responsive clamp
+        img.dataset.requestedW = String(w);
+        img.dataset.requestedH = String(h);
       }
+      normalizeImages(); // ensure clamp vs container width
     }
 
     function customImageHandler() {
@@ -186,7 +137,6 @@
       input.onchange = () => {
         const file = input.files && input.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = () => {
           const { width, height } = askImageSize();
@@ -197,6 +147,64 @@
       input.click();
     }
 
+    // Sanitize incoming HTML & clamp images to editor width while preserving requested size
+    function sanitizeAndNormalizeHTML(incomingHtml) {
+      const parser = new DOMParser();
+      // Wrap in a container so we can read back innerHTML safely
+      const doc = parser.parseFromString('<div id="__root__"></div>', 'text/html');
+      const root = doc.getElementById('__root__');
+      root.innerHTML = incomingHtml || '';
+
+      const imgs = root.querySelectorAll('img');
+      imgs.forEach(img => {
+        // Strip problematic positional styles/floats
+        const style = img.getAttribute('style') || '';
+        const cleaned = style
+          .replace(/position\s*:\s*(absolute|fixed)\s*;?/ig, '')
+          .replace(/z-index\s*:\s*[^;]+;?/ig, '')
+          .replace(/top\s*:\s*[^;]+;?/ig, '')
+          .replace(/left\s*:\s*[^;]+;?/ig, '')
+          .replace(/right\s*:\s*[^;]+;?/ig, '')
+          .replace(/bottom\s*:\s*[^;]+;?/ig, '')
+          .replace(/float\s*:\s*[^;]+;?/ig, '');
+        if (cleaned !== style) img.setAttribute('style', cleaned.trim());
+
+        img.style.display = 'block';
+        img.style.maxWidth = '100%';
+        img.style.position = 'static';
+
+        // Pull requested size if present; otherwise read px from style/attrs
+        const reqW = parseInt(img.dataset.requestedW || img.getAttribute('width') || (img.style.width || '').replace('px',''), 10);
+        const reqH = parseInt(img.dataset.requestedH || img.getAttribute('height') || (img.style.height || '').replace('px',''), 10);
+
+        // Clamp width to editor width
+        const editorEl = document.getElementById('editor');
+        const editorWidth = Math.max(50, editorEl.clientWidth - 16); // minus padding
+        if (!isNaN(reqW)) {
+          const clampedW = Math.min(reqW, editorWidth);
+          img.style.width = clampedW + 'px';
+          if (!isNaN(reqH) && reqW > 0) {
+            const ratio = reqH / reqW;
+            img.style.height = Math.round(clampedW * ratio) + 'px';
+          } else {
+            img.style.height = 'auto';
+          }
+        } else {
+          // No explicit size: make it fit container
+          img.style.width = '100%';
+          img.style.height = 'auto';
+        }
+      });
+
+      return root.innerHTML;
+    }
+
+    function normalizeImages() {
+      // Re-run clamp after any layout change/resize
+      const html = sanitizeAndNormalizeHTML(quill.root.innerHTML);
+      quill.root.innerHTML = html;
+    }
+
     /* ---------- Initialize Quill ---------- */
     window.addEventListener('DOMContentLoaded', () => {
       quill = new Quill('#editor', {
@@ -205,22 +213,29 @@
         modules: {
           toolbar: {
             container: '#toolbar',
-            handlers: {
-              image: customImageHandler
-            }
+            handlers: { image: customImageHandler }
           }
-          // Alignment module is auto-enabled via <select class="ql-align">
         }
       });
 
       isQuillReady = true;
-      setTimeout(sendEditorReady, 50);
+      setTimeout(() => {
+        sendEditorReady();
+        normalizeImages();
+      }, 50);
 
-      // Process any queued messages
+      // Drain queued messages
       while (pendingMessages.length) {
         const evt = pendingMessages.shift();
         processMessage(evt);
       }
+
+      // Re-clamp on resize (device rotation, iframe resize)
+      window.addEventListener('resize', () => {
+        // debounce a bit
+        clearTimeout(window.__imgClampTO);
+        window.__imgClampTO = setTimeout(normalizeImages, 60);
+      });
     });
 
     /* ---------- Messaging bridge ---------- */
@@ -235,14 +250,12 @@
 
       if (data?.type === 'setContent') {
         const incomingHtml = data.html || '';
-        try {
-          const delta = quill.clipboard.convert(incomingHtml);
-          quill.setContents(delta);
-        } catch (e) {
-          // If conversion loses styles, fall back to raw HTML
-          console.warn('Falling back to innerHTML for setContent.', e);
-          quill.root.innerHTML = incomingHtml;
-        }
+        // IMPORTANT: don't use clipboard.convert — it drops img sizes
+        const safeHtml = sanitizeAndNormalizeHTML(incomingHtml);
+        quill.root.innerHTML = safeHtml;
+        // Ensure cursor is at end
+        const len = quill.getLength();
+        quill.setSelection(len - 1, 0, 'silent');
       }
     };
 
