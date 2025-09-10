@@ -53,27 +53,44 @@
       display: block;
     }
 
-    /* Existing alignment for text */
+    /* Text alignment (unchanged) */
     .ql-editor .ql-align-center { text-align: center; }
     .ql-editor .ql-align-right  { text-align: right; }
     .ql-editor .ql-align-justify { text-align: justify; }
 
-    /* ✅ Alignment for images (match EventList domVisitors logic) */
-    .ql-editor .ql-align-center img {
+    /* ✅ Image alignment — handle every way Quill may encode it */
+
+    /* Centered */
+    .ql-editor .ql-align-center img,
+    .ql-editor img.ql-align-center,
+    .ql-editor img[data-align="center"],
+    .ql-editor [style*="text-align:center"] > img {
       display: block;
       margin-left: auto;
       margin-right: auto;
+      float: none;       /* make sure floats don’t override centering */
     }
-    .ql-editor .ql-align-right img {
+
+    /* Right */
+    .ql-editor .ql-align-right img,
+    .ql-editor img.ql-align-right,
+    .ql-editor img[data-align="right"],
+    .ql-editor [style*="text-align:right"] > img {
       display: block;
       margin-left: auto;
       margin-right: 0;
+      float: right;      /* match Quill’s right-alignment behavior */
     }
+
+    /* Left (explicit) */
     .ql-editor .ql-align-left img,
-    .ql-editor img:not([style*="margin"]) {
+    .ql-editor img.ql-align-left,
+    .ql-editor img[data-align="left"],
+    .ql-editor [style*="text-align:left"] > img {
       display: block;
       margin-left: 0;
       margin-right: auto;
+      float: left;
     }
 
   </style>
